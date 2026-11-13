@@ -1,0 +1,96 @@
+name: strictnum cross-platform CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unix-native:
+    name: ${{ matrix.os }} / ${{ matrix.arch }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, arch: x64 }
+          - { os: ubuntu-24.04-arm, arch: arm64 }
+          - { os: macos-15-intel, arch: x86_64 }
+          - { os: macos-15, arch: arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install Clang on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-18-dev
+      - name: Run native test matrix
+        shell: bash
+        env:
+          REQUIRE_SANITIZERS: '1'
+          RUN_FUZZER: '0'
+        run: sh tests/run_all.sh
+
+  linux-32-bit:
+    name: Linux ILP32 / x86 32-bit
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install multilib toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
+      - name: Run complete suite with mandatory 32-bit execution
+        shell: bash
+        env:
+          REQUIRE_32BIT: '1'
+          RUN_FUZZER: '0'
+        run: sh tests/run_all.sh
+
+  windows-msvc:
+    name: Windows MSVC / ${{ matrix.arch }}
+    timeout-minutes: 30
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Locate Visual Studio and run MSVC tests
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -property installationPath
+          if (-not $vs) { throw 'Visual Studio installation not found' }
+          $vcvars = Join-Path $vs 'VC\Auxiliary\Build\vcvarsall.bat'
+          $arch = '${{ matrix.arch }}'
+          cmd.exe /c "call `"$vcvars`" $arch && powershell -ExecutionPolicy Bypass -File tests\run_windows.ps1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  linux-semantic-fuzz:
+    name: Linux / mandatory semantic fuzzing
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install Clang with libFuzzer
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-18-dev
+      - name: Compile semantic harness with warnings as errors and sanitizers
+        run: >-
+          clang -std=c99 -O1 -g -Wall -Wextra -Wpedantic -Werror
+          -fsanitize=fuzzer,address,undefined
+          -fno-omit-frame-pointer tests/fuzz_strictnum.c -o fuzz_strictnum
+      - name: Prepare seed corpus
+        run: |
+          mkdir -p "$RUNNER_TEMP/strictnum-fuzz-corpus"
+          cp -R tests/fuzz_corpus/. "$RUNNER_TEMP/strictnum-fuzz-corpus/"
+      - name: Run mandatory semantic fuzz campaign
+        run: ./fuzz_strictnum -verbosity=0 -max_len=256 -runs=250000 "$RUNNER_TEMP/strictnum-fuzz-corpus"

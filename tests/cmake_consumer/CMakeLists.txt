@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.15)
+project(strictnum_consumer_smoke LANGUAGES C)
+find_package(strictnum 1 CONFIG REQUIRED)
+add_executable(strictnum_consumer main.c)
+target_link_libraries(strictnum_consumer PRIVATE strictnum::strictnum)

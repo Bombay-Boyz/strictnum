@@ -1,0 +1,21 @@
+*.o
+*.obj
+*.exe
+*.out
+*.pdb
+*.ilk
+*.dSYM/
+/build/
+/fuzz_corpus/
+.DS_Store
+fuzz_strictnum
+*.plist
+/cmake-build-*/
+/CMakeUserPresets.json
+
+# CMake-generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+Testing/

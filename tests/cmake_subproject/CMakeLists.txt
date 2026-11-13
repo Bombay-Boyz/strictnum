@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.15)
+project(strictnum_subproject_consumer LANGUAGES C)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../.." strictnum-build)
+add_executable(subproject_consumer main.c)
+target_link_libraries(subproject_consumer PRIVATE strictnum::strictnum)
