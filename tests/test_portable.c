@@ -19,6 +19,28 @@
 
 static unsigned long g_checks, g_fails;
 
+/* C89/C++98-compatible bounded decimal formatter for the test oracle.
+ * Avoid sprintf: Apple marks it deprecated, and snprintf is not C89.
+ */
+static void format_long_decimal(char *buf, size_t capacity, long value)
+{
+    char reversed[sizeof(unsigned long) * 3u + 1u];
+    unsigned long magnitude;
+    size_t count = 0;
+
+    if (buf == NULL || capacity == 0) abort();
+    magnitude = value < 0 ? 0UL - (unsigned long)value : (unsigned long)value;
+    do {
+        reversed[count++] = (char)('0' + magnitude % 10UL);
+        magnitude /= 10UL;
+    } while (magnitude != 0UL);
+    if (value < 0) reversed[count++] = '-';
+
+    if (count >= capacity) abort();
+    while (count != 0) *buf++ = reversed[--count];
+    *buf = '\0';
+}
+
 #define CHECK(cond)                                                          \
     do {                                                                     \
         ++g_checks;                                                          \
@@ -152,7 +174,7 @@ static void test_small_roundtrips(void)
     long v;
     for (v = -32768L; v <= 32767L; ++v) {
         sn_i16 o16 = 0;
-        sprintf(buf, "%ld", v);
+        format_long_decimal(buf, sizeof buf, v);
         CHECK(sn_parse_i16_z(buf, &o16) == SN_OK && (long)o16 == v);
         if (v >= -128L && v <= 127L) {
             sn_i8 o8 = 0;
@@ -161,7 +183,7 @@ static void test_small_roundtrips(void)
     }
     for (v = 0L; v <= 65535L; ++v) {
         sn_u16 o16 = 0;
-        sprintf(buf, "%ld", v);
+        format_long_decimal(buf, sizeof buf, v);
         CHECK(sn_parse_u16_z(buf, &o16) == SN_OK && (long)o16 == v);
         if (v <= 255L) {
             sn_u8 o8 = 0;

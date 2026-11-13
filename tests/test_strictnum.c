@@ -200,7 +200,11 @@ static void test_boundaries(void)
             size_t o = 0;
             if (*p == '-') buf[o++] = *p++;
             memset(buf + o, '0', z); o += z;
-            strcpy(buf + o, p);
+            {
+                const size_t n = strlen(p) + 1u;
+                if (o > sizeof buf || n > sizeof buf - o) abort();
+                memcpy(buf + o, p, n);
+            }
             diff_all(buf, 10);
         }
     }
@@ -211,7 +215,11 @@ static void test_boundaries(void)
             size_t o = 0;
             if (*p == '-') buf[o++] = *p++;
             memset(buf + o, '0', z); o += z;
-            strcpy(buf + o, p);
+            {
+                const size_t n = strlen(p) + 1u;
+                if (o > sizeof buf || n > sizeof buf - o) abort();
+                memcpy(buf + o, p, n);
+            }
             diff_all(buf, 16);
         }
     }
@@ -221,7 +229,9 @@ static void test_boundaries(void)
 static void test_random_strings(void)
 {
     static const unsigned bases[] = { 10, 16, 8, 36 };
-    static const char invalid[] = { '/', '_', '+', ' ', '\t', '\x01', (char)0x80, '\x7f' };
+    static const unsigned char invalid[] = {
+        '/', '_', '+', ' ', '\t', '\x01', 0x80u, '\x7f'
+    };
     int iter;
     for (iter = 0; iter < 400000; ++iter) {
         const unsigned base = bases[rnd() % 4];
@@ -234,7 +244,9 @@ static void test_random_strings(void)
             if (r < base && r < 36)
                 buf[k] = "0123456789abcdefghijklmnopqrstuvwxyz"[r];
             else
-                buf[k] = invalid[r % (unsigned)(sizeof invalid / sizeof invalid[0])];
+                memcpy(&buf[k],
+                       &invalid[r % (unsigned)(sizeof invalid / sizeof invalid[0])],
+                       sizeof buf[k]);
         }
         buf[len + i] = '\0';
         diff_all(buf, base);
