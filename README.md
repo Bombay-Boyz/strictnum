@@ -27,6 +27,9 @@ returns a specific error. It is intended for configuration values, protocol
 fields and other inputs where partial conversion and silent wrapping are
 unacceptable.
 
+## Disclosure
+This project has been prepared using AI. 
+
 ## Design properties
 
 - **Whole-input validation.** `"12abc"`, `" 12"` and `"12 "` are rejected.
