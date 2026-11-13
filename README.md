@@ -235,11 +235,28 @@ separate mandatory Linux 32-bit and libFuzzer jobs; those jobs fail rather
 than silently passing when the required toolchain is unavailable. See
 [`TESTING.md`](TESTING.md) for commands and CI coverage.
 
-**Verification status:** a workflow definition is not evidence that a hosted
-runner has passed. Until the GitHub Actions runs for this repository are
-completed successfully, the configured Windows, macOS, ARM64 and 32-bit jobs
-must be described as configured, not verified. Big-endian, EBCDIC and
-8-/16-bit microcontroller targets are not currently verified.
+
+**Verification status:** the GitHub Actions workflow completed successfully
+for commit `d0fd865a0b8b6ae2b91c48b7b74a682fb38769f1` on 13 November 2026.
+
+The successful run verified the following configured targets:
+
+- Linux x86-64 and ARM64;
+- macOS Intel and Apple Silicon;
+- Windows MSVC x64 and x86;
+- Linux x86 32-bit execution (ILP32);
+- Linux Clang AddressSanitizer/UndefinedBehaviorSanitizer and mandatory
+  semantic libFuzzer testing.
+
+These results establish verification for the listed configurations and
+that specific commit. They do not establish compatibility with every
+compiler, operating system, architecture or C implementation.
+
+Big-endian, EBCDIC and 8-/16-bit microcontroller targets are not currently
+verified. Local developer machines may skip optional facilities when the
+required toolchain or runtime is unavailable. See [`TESTING.md`](TESTING.md)
+for the test commands and CI coverage.
+
 
 ## Examples and tutorial
 

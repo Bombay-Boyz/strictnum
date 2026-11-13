@@ -75,19 +75,35 @@ clang -std=c99 -O1 -g -fsanitize=fuzzer,address,undefined \
 Keep minimized crashing or mismatching inputs as regression corpus entries
 and convert important discoveries into deterministic tests.
 
+
 ## CI coverage
 
-`.github/workflows/ci.yml` defines jobs for:
+`.github/workflows/ci.yml` defines the following CI jobs:
 
 - Linux x86-64 and ARM64;
 - macOS Intel and Apple Silicon;
-- Linux x86 32-bit execution;
+- Linux x86 32-bit execution (ILP32);
 - Windows MSVC x64 and x86;
 - a mandatory Linux Clang/libFuzzer campaign.
 
-These are configured targets, not verified targets, until their GitHub Actions
-runs have completed successfully. The Windows job uses MSVC's supported C
-language mode; it does not claim strict C89 compiler conformance.
+**Verified CI result:** all eight jobs completed successfully on commit
+`d0fd865a0b8b6ae2b91c48b7b74a682fb38769f1` on 13 November 2026.
+
+The Windows job uses MSVC's supported C language mode; it does not claim
+strict C89 compiler conformance.
+
+The Unix native jobs require sanitizer execution. The Linux 32-bit job
+requires actual 32-bit compilation and execution. The dedicated fuzzing
+job requires the Clang libFuzzer runtime and executes a mandatory
+semantic fuzzing campaign.
+
+These results verify the listed configurations on the recorded commit.
+They do not establish compatibility with every compiler, operating system,
+architecture or C implementation.
+
+Big-endian, EBCDIC and 8-/16-bit microcontroller targets are not currently
+verified.
+
 
 ## Header and integration checks
 
