@@ -28,8 +28,24 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'MSVC port example compilation failed' }
   $portOutput = & "$build\port.exe" 8080
   if ($LASTEXITCODE -ne 0 -or $portOutput -notmatch 'port = 8080') { throw 'MSVC port example failed' }
-  & "$build\port.exe" 0 *> $null
-  if ($LASTEXITCODE -eq 0) { throw 'MSVC port example accepted port zero' }
+  # Capture the expected failure through .NET rather than PowerShell's native
+  # stderr stream, which can become a terminating NativeCommandError when
+  # ErrorActionPreference is Stop.
+  $portProcess = New-Object System.Diagnostics.Process
+  $portProcess.StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $portProcess.StartInfo.FileName = Join-Path $build 'port.exe'
+  $portProcess.StartInfo.Arguments = '0'
+  $portProcess.StartInfo.UseShellExecute = $false
+  $portProcess.StartInfo.RedirectStandardError = $true
+  if (-not $portProcess.Start()) { throw 'Could not start MSVC port example negative test' }
+  $portError = $portProcess.StandardError.ReadToEnd()
+  $portProcess.WaitForExit()
+  $portExitCode = $portProcess.ExitCode
+  $portProcess.Dispose()
+  if ($portExitCode -eq 0) { throw 'MSVC port example accepted port zero' }
+  if ($portError -notmatch 'invalid port "0": must be 1-65535') {
+    throw 'MSVC port example did not emit the expected port-zero diagnostic'
+  }
 
   foreach ($standard in @('c++14', 'c++17', 'c++20')) {
     $exe = Join-Path $build ("portable-" + $standard + '.exe')
