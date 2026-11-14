@@ -71,6 +71,20 @@ if "$BUILD/port" 0 >/dev/null 2>&1; then
     exit 1
 fi
 
+# Every "$ ./port ARG" transcript in TUTORIAL.md must match real output.
+awk '/^\$ \.\/port /{arg=$3; next} arg!="" {print arg "\t" $0; arg=""}' \
+    "$ROOT/TUTORIAL.md" >"$BUILD/port.expected"
+[ -s "$BUILD/port.expected" ] || { echo 'FAIL: no port transcript in TUTORIAL.md' >&2; exit 1; }
+while IFS=$(printf '\t') read -r arg want; do
+    got=$("$BUILD/port" "$arg" 2>&1 || true)
+    if [ "$got" != "$want" ]; then
+        echo "FAIL: TUTORIAL transcript for './port $arg' is stale" >&2
+        echo "  doc:    $want" >&2
+        echo "  actual: $got" >&2
+        exit 1
+    fi
+done <"$BUILD/port.expected"
+
 # The max-lines example accepts LF/CRLF and a final line without LF.
 printf '12\r\n-4\r\n31' | "$BUILD/max_lines" >"$BUILD/max.out"
 grep -F 'maximum = 31' "$BUILD/max.out" >/dev/null

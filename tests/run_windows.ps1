@@ -15,9 +15,9 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'MSVC portable C suite failed' }
 
   & cl.exe /nologo /std:c11 /W4 /WX /I. tests\test_header_namespace.c "/Fe:$build\namespace.exe"
-  if ($LASTEXITCODE -ne 0) { throw 'MSVC namespace/SN_API compatibility compilation failed' }
+  if ($LASTEXITCODE -ne 0) { throw 'MSVC namespace-hygiene compilation failed' }
   & "$build\namespace.exe"
-  if ($LASTEXITCODE -ne 0) { throw 'MSVC namespace/SN_API compatibility test failed' }
+  if ($LASTEXITCODE -ne 0) { throw 'MSVC namespace-hygiene test failed' }
 
   & cl.exe /nologo /std:c11 /W4 /WX /I. tests\multi_tu\first.c tests\multi_tu\second.c tests\multi_tu\main.c "/Fe:$build\multi-tu.exe"
   if ($LASTEXITCODE -ne 0) { throw 'MSVC multi-translation-unit compilation failed' }

@@ -6,7 +6,10 @@ are listed under `Unreleased`; versioned sections describe released versions.
 
 ## Unreleased
 
-No unreleased changes.
+- Fixed the `TUTORIAL.md` port example so its code and transcript match
+  `examples/port.c`; `tests/test_examples.sh` now checks the transcript.
+- Added `SECURITY.md`, `CONTRIBUTING.md`, `.editorconfig` and Dependabot
+  configuration for GitHub Actions.
 
 ## 1.0.0
 

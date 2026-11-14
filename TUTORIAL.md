@@ -150,9 +150,12 @@ int main(int argc, char **argv)
     }
 
     st = sn_parse_u16_z(argv[1], &port);
-    if (st != SN_OK || port == 0) {
-        fprintf(stderr, "invalid port \"%s\": %s\n", argv[1],
-                st == SN_OK ? "port must be 1..65535" : sn_status_string(st));
+    if (st != SN_OK) {
+        fprintf(stderr, "invalid port \"%s\": %s\n", argv[1], sn_status_string(st));
+        return 1;
+    }
+    if (port == 0) {
+        fprintf(stderr, "invalid port \"%s\": must be 1-65535\n", argv[1]);
         return 1;
     }
 
