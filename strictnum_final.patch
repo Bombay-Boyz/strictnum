@@ -1,0 +1,394 @@
+diff --git a/.clang-format b/.clang-format
+new file mode 100644
+index 0000000..ee52a49
+--- /dev/null
++++ b/.clang-format
+@@ -0,0 +1,7 @@
++BasedOnStyle: LLVM
++IndentWidth: 4
++UseTab: Never
++BreakBeforeBraces: Linux
++AllowShortIfStatementsOnASingleLine: Never
++ColumnLimit: 80
++SortIncludes: false
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.md b/.github/ISSUE_TEMPLATE/bug_report.md
+new file mode 100644
+index 0000000..88de039
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.md
+@@ -0,0 +1,12 @@
++---
++name: Bug report
++about: Wrong status, wrong value, or a build problem
++---
++
++**Input and call** (exact string, length, base, function):
++
++**Expected status/value:**
++
++**Actual status/value:**
++
++**Compiler, version, OS, architecture, flags:**
+diff --git a/.github/PULL_REQUEST_TEMPLATE.md b/.github/PULL_REQUEST_TEMPLATE.md
+new file mode 100644
+index 0000000..9a5dc09
+--- /dev/null
++++ b/.github/PULL_REQUEST_TEMPLATE.md
+@@ -0,0 +1,7 @@
++## What and why
++
++## Checklist
++
++- [ ] `sh tests/run_all.sh` passes
++- [ ] Tests added or updated for the behaviour change
++- [ ] `CHANGELOG.md` updated
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 0b25b0e..6df5ec5 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,10 +6,7 @@ are listed under `Unreleased`; versioned sections describe released versions.
+ 
+ ## Unreleased
+ 
+-- Fixed the `TUTORIAL.md` port example so its code and transcript match
+-  `examples/port.c`; `tests/test_examples.sh` now checks the transcript.
+-- Added `SECURITY.md`, `CONTRIBUTING.md`, `.editorconfig` and Dependabot
+-  configuration for GitHub Actions.
++No unreleased changes.
+ 
+ ## 1.0.0
+ 
+@@ -28,3 +25,12 @@ are listed under `Unreleased`; versioned sections describe released versions.
+   argument and fallback regression coverage, and semantic fuzzing.
+ - Added portability, integration, testing, API documentation and release
+   metadata checks.
++- Fixed the `TUTORIAL.md` port example to match `examples/port.c`;
++  `tests/test_examples.sh` now checks the tutorial transcript.
++- CMake reads the package version from `strictnum.h`; the header is installed
++  once, under `include/strictnum/`; a `strictnum.pc` pkg-config file is
++  installed; the CTest suite now covers the 64-bit-disabled, no-stdint,
++  digit-fallback, hygiene and multi-translation-unit builds.
++- Added `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
++  `.editorconfig`, `.clang-format`, issue and pull request templates, and
++  Dependabot configuration for GitHub Actions.
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index cbbf0d3..ef68c9d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,5 +1,24 @@
+ cmake_minimum_required(VERSION 3.15)
+-project(strictnum VERSION 1.0.0 LANGUAGES C)
++
++# Single source of truth for the version: the STRICTNUM_VERSION_* macros in
++# strictnum.h.
++file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/strictnum.h" _strictnum_version_lines
++     REGEX "^#define STRICTNUM_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+")
++foreach(_part MAJOR MINOR PATCH)
++    set(_strictnum_${_part} "")
++    foreach(_line IN LISTS _strictnum_version_lines)
++        if(_line MATCHES "STRICTNUM_VERSION_${_part}[ \t]+([0-9]+)")
++            set(_strictnum_${_part} "${CMAKE_MATCH_1}")
++        endif()
++    endforeach()
++    if(_strictnum_${_part} STREQUAL "")
++        message(FATAL_ERROR "strictnum: cannot read STRICTNUM_VERSION_${_part} from strictnum.h")
++    endif()
++endforeach()
++
++project(strictnum
++    VERSION ${_strictnum_MAJOR}.${_strictnum_MINOR}.${_strictnum_PATCH}
++    LANGUAGES C)
+ 
+ include(GNUInstallDirs)
+ include(CMakePackageConfigHelpers)
+@@ -25,9 +44,16 @@ target_include_directories(strictnum INTERFACE
+ 
+ if(STRICTNUM_INSTALL)
+     install(TARGETS strictnum EXPORT strictnumTargets)
+-    # Install both the conventional top-level header and a namespaced path.
+-    install(FILES strictnum.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
++    # One installed copy, in a namespaced directory. Both `#include
++    # "strictnum.h"` (through the CMake target or pkg-config) and
++    # `#include <strictnum/strictnum.h>` (with the prefix include directory
++    # on the search path) work.
+     install(FILES strictnum.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/strictnum")
++    configure_file(
++        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/strictnum.pc.in"
++        "${CMAKE_CURRENT_BINARY_DIR}/strictnum.pc" @ONLY)
++    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/strictnum.pc"
++        DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig")
+     install(EXPORT strictnumTargets
+         FILE strictnumTargets.cmake
+         NAMESPACE strictnum::
+@@ -53,21 +79,5 @@ endif()
+ 
+ if(STRICTNUM_BUILD_TESTS)
+     enable_testing()
+-    add_executable(strictnum_test_strict tests/test_strictnum.c)
+-    target_link_libraries(strictnum_test_strict PRIVATE strictnum::strictnum)
+-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+-        target_compile_options(strictnum_test_strict PRIVATE -Wall -Wextra -Wpedantic)
+-    endif()
+-    add_test(NAME strictnum.core COMMAND strictnum_test_strict)
+-
+-    add_executable(strictnum_test_portable tests/test_portable.c)
+-    target_link_libraries(strictnum_test_portable PRIVATE strictnum::strictnum)
+-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+-        target_compile_options(strictnum_test_portable PRIVATE -Wall -Wextra -Wpedantic)
+-    endif()
+-    add_test(NAME strictnum.portable COMMAND strictnum_test_portable)
+-
+-    add_executable(strictnum_test_namespace tests/test_header_namespace.c)
+-    target_link_libraries(strictnum_test_namespace PRIVATE strictnum::strictnum)
+-    add_test(NAME strictnum.namespace COMMAND strictnum_test_namespace)
++    add_subdirectory(tests)
+ endif()
+diff --git a/CODE_OF_CONDUCT.md b/CODE_OF_CONDUCT.md
+new file mode 100644
+index 0000000..a813ec0
+--- /dev/null
++++ b/CODE_OF_CONDUCT.md
+@@ -0,0 +1,7 @@
++# Code of conduct
++
++Be respectful and constructive. Discuss the code and the ideas, not the
++person. Harassment, insults and personal attacks are not acceptable.
++Maintainers may edit or remove contributions and block participants who
++do not follow this. Report concerns through the repository's private
++security-reporting channel or by contacting a maintainer.
+diff --git a/PROJECT_LAYOUT.txt b/PROJECT_LAYOUT.txt
+index 59081dc..3fc7871 100644
+--- a/PROJECT_LAYOUT.txt
++++ b/PROJECT_LAYOUT.txt
+@@ -21,6 +21,9 @@ strictnum/                              Repository root
+ |   |-- test_header_namespace.c          Macro hygiene and API test
+ |   |-- run_all.sh                      Local cross-standard test driver
+ |   |-- run_windows.ps1                 MSVC test runner
++|   |-- CMakeLists.txt                  CTest suite definition
++|   |-- support.h                       Shared CHECK macro and counters
++|   |-- header_hygiene.c                Self-containment and macro-leak test
+ |   |-- multi_tu/                        Multi-translation-unit tests
+ |   |-- cmake_consumer/                  Installed-package consumer
+ |   |-- cmake_subproject/                add_subdirectory consumer
+diff --git a/TESTING.md b/TESTING.md
+index 1dffaa7..c258da6 100644
+--- a/TESTING.md
++++ b/TESTING.md
+@@ -121,8 +121,9 @@ mismatch as a deterministic regression test before changing the implementation.
+ 
+ ## CTest and CMake integration
+ 
+-For a top-level checkout, CMake enables the `strictnum.core`,
+-`strictnum.portable`, and `strictnum.namespace` tests by default:
++For a top-level checkout, CMake enables the CTest suite by default
++(`strictnum.core`, `core_no64`, `portable`, `portable_no_stdint_no64`,
++`digit_fallback`, `hygiene`, `multi_tu` and `namespace`):
+ 
+ ```sh
+ cmake -S . -B build
+diff --git a/cmake/strictnum.pc.in b/cmake/strictnum.pc.in
+new file mode 100644
+index 0000000..15622cd
+--- /dev/null
++++ b/cmake/strictnum.pc.in
+@@ -0,0 +1,7 @@
++prefix=@CMAKE_INSTALL_PREFIX@
++includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
++
++Name: strictnum
++Description: Strict fixed-width integer parsing (single header)
++Version: @PROJECT_VERSION@
++Cflags: -I${includedir}/strictnum
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+new file mode 100644
+index 0000000..f885d29
+--- /dev/null
++++ b/tests/CMakeLists.txt
+@@ -0,0 +1,31 @@
++# CTest suite. Each test is one executable built against the strictnum target.
++function(strictnum_test name)
++    cmake_parse_arguments(T "" "" "SOURCES;DEFINES;OPTIONS" ${ARGN})
++    add_executable(strictnum_${name} ${T_SOURCES})
++    target_link_libraries(strictnum_${name} PRIVATE strictnum::strictnum)
++    if(T_DEFINES)
++        target_compile_definitions(strictnum_${name} PRIVATE ${T_DEFINES})
++    endif()
++    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
++        target_compile_options(strictnum_${name} PRIVATE -Wall -Wextra -Wpedantic ${T_OPTIONS})
++    elseif(MSVC)
++        target_compile_options(strictnum_${name} PRIVATE /W4)
++    endif()
++    add_test(NAME strictnum.${name} COMMAND strictnum_${name})
++endfunction()
++
++strictnum_test(core SOURCES test_strictnum.c)
++strictnum_test(core_no64 SOURCES test_strictnum.c DEFINES STRICTNUM_NO_64)
++strictnum_test(portable SOURCES test_portable.c)
++strictnum_test(portable_no_stdint_no64 SOURCES test_portable.c
++    DEFINES STRICTNUM_NO_STDINT STRICTNUM_NO_64)
++strictnum_test(digit_fallback SOURCES test_portable.c
++    DEFINES STRICTNUM_TEST_FORCE_NONASCII_DIGITS)
++strictnum_test(hygiene SOURCES header_hygiene.c)
++strictnum_test(multi_tu
++    SOURCES multi_tu/first.c multi_tu/second.c multi_tu/main.c)
++
++# Not built with -Wpedantic: this test deliberately defines SN_API itself.
++add_executable(strictnum_namespace test_header_namespace.c)
++target_link_libraries(strictnum_namespace PRIVATE strictnum::strictnum)
++add_test(NAME strictnum.namespace COMMAND strictnum_namespace)
+diff --git a/tests/check_release_metadata.sh b/tests/check_release_metadata.sh
+index ac1cf6e..2bb3cfe 100755
+--- a/tests/check_release_metadata.sh
++++ b/tests/check_release_metadata.sh
+@@ -7,12 +7,16 @@ header_major=$(sed -n 's/^#define STRICTNUM_VERSION_MAJOR[[:space:]]*//p' "$ROOT
+ header_minor=$(sed -n 's/^#define STRICTNUM_VERSION_MINOR[[:space:]]*//p' "$ROOT/strictnum.h")
+ header_patch=$(sed -n 's/^#define STRICTNUM_VERSION_PATCH[[:space:]]*//p' "$ROOT/strictnum.h")
+ header_comment_version=$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' "$ROOT/strictnum.h")
+-cmake_version=$(sed -n 's/^project(strictnum VERSION \([^ ]*\).*/\1/p' "$ROOT/CMakeLists.txt")
+ header_version="$header_major.$header_minor.$header_patch"
+ 
+-if [ -z "$cmake_version" ] || [ "$header_version" != "$cmake_version" ] ||
+-   [ "$header_version" != "$header_comment_version" ]; then
+-    echo "release metadata: version mismatch (header macros=$header_version, header comment=$header_comment_version, CMake=$cmake_version)" >&2
++if [ "$header_version" != "$header_comment_version" ]; then
++    echo "release metadata: version mismatch (header macros=$header_version, header comment=$header_comment_version)" >&2
++    exit 1
++fi
++# CMake takes its version from the header; make sure nobody re-hard-codes it.
++if ! grep -q 'STRICTNUM_VERSION_(MAJOR|MINOR|PATCH)' "$ROOT/CMakeLists.txt" ||
++   grep -Eq '^project\(strictnum VERSION [0-9]' "$ROOT/CMakeLists.txt"; then
++    echo 'release metadata: CMakeLists.txt must read its version from strictnum.h' >&2
+     exit 1
+ fi
+ if ! awk -v heading="## $header_version" '$0 == heading { found = 1 } END { exit !found }' "$ROOT/CHANGELOG.md"; then
+diff --git a/tests/header_hygiene.c b/tests/header_hygiene.c
+new file mode 100644
+index 0000000..a635ea8
+--- /dev/null
++++ b/tests/header_hygiene.c
+@@ -0,0 +1,21 @@
++/* Header hygiene: strictnum.h must be self-contained, idempotent, and must
++ * not leak its internal macros into the including translation unit. */
++#include "../strictnum.h"
++#include "../strictnum.h" /* second inclusion must be harmless */
++
++#if defined(SN_DETAIL_CAST) || defined(SN_DETAIL_FN) ||                      \
++    defined(SN_DETAIL_MAKE_SIGNED) || defined(SN_DETAIL_DEFINE_Z_WRAPPERS) || \
++    defined(SN_DETAIL_STDINT_8_32) || defined(SN_DETAIL_STDINT_64)
++#error "strictnum.h leaked an internal macro"
++#endif
++
++#if !defined(STRICTNUM_VERSION_MAJOR) || !defined(STRICTNUM_VERSION_MINOR) || \
++    !defined(STRICTNUM_VERSION_PATCH)
++#error "strictnum.h must define its version macros"
++#endif
++
++int main(void)
++{
++    sn_u8 v = 0;
++    return sn_parse_u8_z("255", &v) == SN_OK && v == 255u ? 0 : 1;
++}
+diff --git a/tests/run_all.sh b/tests/run_all.sh
+index ece507e..0b78538 100755
+--- a/tests/run_all.sh
++++ b/tests/run_all.sh
+@@ -176,6 +176,21 @@ if command -v cmake >/dev/null 2>&1; then
+     run cmake --build "$BUILD/cmake-build" --parallel
+     run ctest --test-dir "$BUILD/cmake-build" --output-on-failure
+     run cmake --install "$BUILD/cmake-build"
++    pc_file=$(find "$BUILD/cmake-install" -name strictnum.pc -print -quit)
++    if [ -z "$pc_file" ]; then
++        echo 'FAIL: strictnum.pc was not installed' >&2
++        exit 1
++    fi
++    if [ "$(find "$BUILD/cmake-install" -name strictnum.h | wc -l | tr -d ' ')" != 1 ]; then
++        echo 'FAIL: strictnum.h must be installed exactly once' >&2
++        exit 1
++    fi
++    if command -v pkg-config >/dev/null 2>&1; then
++        run env PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --exists strictnum
++        pc_cflags=$(PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --cflags strictnum)
++        # shellcheck disable=SC2086
++        run "$CC" -std=c99 -Wall -Wextra -Werror $pc_cflags -c "$ROOT/tests/cmake_consumer/main.c" -o "$BUILD/pc_consumer.o"
++    fi
+     version_file=$(find "$BUILD/cmake-install" -name strictnumConfigVersion.cmake -print -quit)
+     if [ -z "$version_file" ] || grep -F 'CMAKE_SIZEOF_VOID_P' "$version_file" >/dev/null; then
+         echo 'ERROR: installed header-only package is not architecture-independent' >&2
+diff --git a/tests/support.h b/tests/support.h
+new file mode 100644
+index 0000000..de434f9
+--- /dev/null
++++ b/tests/support.h
+@@ -0,0 +1,17 @@
++/* Shared test helpers: counters and the CHECK macro. Include after <stdio.h>. */
++#ifndef STRICTNUM_TEST_SUPPORT_H
++#define STRICTNUM_TEST_SUPPORT_H
++
++static unsigned long g_checks, g_fails;
++
++#define CHECK(cond)                                                          \
++    do {                                                                     \
++        ++g_checks;                                                          \
++        if (!(cond)) {                                                       \
++            ++g_fails;                                                       \
++            if (g_fails <= 25)                                               \
++                fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
++        }                                                                    \
++    } while (0)
++
++#endif
+diff --git a/tests/test_portable.c b/tests/test_portable.c
+index b2d2265..d23faaf 100644
+--- a/tests/test_portable.c
++++ b/tests/test_portable.c
+@@ -16,8 +16,8 @@
+ #include <string.h>
+ 
+ #include "../strictnum.h"
++#include "support.h"
+ 
+-static unsigned long g_checks, g_fails;
+ 
+ /* C89/C++98-compatible bounded decimal formatter for the test oracle.
+  * Avoid sprintf: Apple marks it deprecated, and snprintf is not C89.
+@@ -41,15 +41,6 @@ static void format_long_decimal(char *buf, size_t capacity, long value)
+     *buf = '\0';
+ }
+ 
+-#define CHECK(cond)                                                          \
+-    do {                                                                     \
+-        ++g_checks;                                                          \
+-        if (!(cond)) {                                                       \
+-            ++g_fails;                                                       \
+-            if (g_fails <= 25)                                               \
+-                fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+-        }                                                                    \
+-    } while (0)
+ 
+ /* ---- independent oracle (long-based) ---------------------------------- */
+ static int ref_is_digit(char c, unsigned base)
+diff --git a/tests/test_strictnum.c b/tests/test_strictnum.c
+index 4372b99..0228a00 100644
+--- a/tests/test_strictnum.c
++++ b/tests/test_strictnum.c
+@@ -14,18 +14,9 @@
+ #include <string.h>
+ 
+ #include "../strictnum.h"
++#include "support.h"
++
+ 
+-static unsigned long g_checks, g_fails;
+-
+-#define CHECK(cond)                                                          \
+-    do {                                                                     \
+-        ++g_checks;                                                          \
+-        if (!(cond)) {                                                       \
+-            ++g_fails;                                                       \
+-            if (g_fails <= 25)                                               \
+-                fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+-        }                                                                    \
+-    } while (0)
+ 
+ /* ---- deterministic PRNG (xorshift64*) -------------------------------- */
+ static unsigned long long g_rng = 88172645463325252ULL;
