@@ -176,6 +176,21 @@ if command -v cmake >/dev/null 2>&1; then
     run cmake --build "$BUILD/cmake-build" --parallel
     run ctest --test-dir "$BUILD/cmake-build" --output-on-failure
     run cmake --install "$BUILD/cmake-build"
+    pc_file=$(find "$BUILD/cmake-install" -name strictnum.pc -print -quit)
+    if [ -z "$pc_file" ]; then
+        echo 'FAIL: strictnum.pc was not installed' >&2
+        exit 1
+    fi
+    if [ "$(find "$BUILD/cmake-install" -name strictnum.h | wc -l | tr -d ' ')" != 1 ]; then
+        echo 'FAIL: strictnum.h must be installed exactly once' >&2
+        exit 1
+    fi
+    if command -v pkg-config >/dev/null 2>&1; then
+        run env PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --exists strictnum
+        pc_cflags=$(PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --cflags strictnum)
+        # shellcheck disable=SC2086
+        run "$CC" -std=c99 -Wall -Wextra -Werror $pc_cflags -c "$ROOT/tests/cmake_consumer/main.c" -o "$BUILD/pc_consumer.o"
+    fi
     version_file=$(find "$BUILD/cmake-install" -name strictnumConfigVersion.cmake -print -quit)
     if [ -z "$version_file" ] || grep -F 'CMAKE_SIZEOF_VOID_P' "$version_file" >/dev/null; then
         echo 'ERROR: installed header-only package is not architecture-independent' >&2

@@ -21,6 +21,9 @@ strictnum/                              Repository root
 |   |-- test_header_namespace.c          Macro hygiene and API test
 |   |-- run_all.sh                      Local cross-standard test driver
 |   |-- run_windows.ps1                 MSVC test runner
+|   |-- CMakeLists.txt                  CTest suite definition
+|   |-- support.h                       Shared CHECK macro and counters
+|   |-- header_hygiene.c                Self-containment and macro-leak test
 |   |-- multi_tu/                        Multi-translation-unit tests
 |   |-- cmake_consumer/                  Installed-package consumer
 |   |-- cmake_subproject/                add_subdirectory consumer

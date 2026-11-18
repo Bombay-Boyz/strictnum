@@ -7,12 +7,16 @@ header_major=$(sed -n 's/^#define STRICTNUM_VERSION_MAJOR[[:space:]]*//p' "$ROOT
 header_minor=$(sed -n 's/^#define STRICTNUM_VERSION_MINOR[[:space:]]*//p' "$ROOT/strictnum.h")
 header_patch=$(sed -n 's/^#define STRICTNUM_VERSION_PATCH[[:space:]]*//p' "$ROOT/strictnum.h")
 header_comment_version=$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' "$ROOT/strictnum.h")
-cmake_version=$(sed -n 's/^project(strictnum VERSION \([^ ]*\).*/\1/p' "$ROOT/CMakeLists.txt")
 header_version="$header_major.$header_minor.$header_patch"
 
-if [ -z "$cmake_version" ] || [ "$header_version" != "$cmake_version" ] ||
-   [ "$header_version" != "$header_comment_version" ]; then
-    echo "release metadata: version mismatch (header macros=$header_version, header comment=$header_comment_version, CMake=$cmake_version)" >&2
+if [ "$header_version" != "$header_comment_version" ]; then
+    echo "release metadata: version mismatch (header macros=$header_version, header comment=$header_comment_version)" >&2
+    exit 1
+fi
+# CMake takes its version from the header; make sure nobody re-hard-codes it.
+if ! grep -q 'STRICTNUM_VERSION_(MAJOR|MINOR|PATCH)' "$ROOT/CMakeLists.txt" ||
+   grep -Eq '^project\(strictnum VERSION [0-9]' "$ROOT/CMakeLists.txt"; then
+    echo 'release metadata: CMakeLists.txt must read its version from strictnum.h' >&2
     exit 1
 fi
 if ! awk -v heading="## $header_version" '$0 == heading { found = 1 } END { exit !found }' "$ROOT/CHANGELOG.md"; then

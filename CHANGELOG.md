@@ -6,10 +6,7 @@ are listed under `Unreleased`; versioned sections describe released versions.
 
 ## Unreleased
 
-- Fixed the `TUTORIAL.md` port example so its code and transcript match
-  `examples/port.c`; `tests/test_examples.sh` now checks the transcript.
-- Added `SECURITY.md`, `CONTRIBUTING.md`, `.editorconfig` and Dependabot
-  configuration for GitHub Actions.
+No unreleased changes.
 
 ## 1.0.0
 
@@ -28,3 +25,12 @@ are listed under `Unreleased`; versioned sections describe released versions.
   argument and fallback regression coverage, and semantic fuzzing.
 - Added portability, integration, testing, API documentation and release
   metadata checks.
+- Fixed the `TUTORIAL.md` port example to match `examples/port.c`;
+  `tests/test_examples.sh` now checks the tutorial transcript.
+- CMake reads the package version from `strictnum.h`; the header is installed
+  once, under `include/strictnum/`; a `strictnum.pc` pkg-config file is
+  installed; the CTest suite now covers the 64-bit-disabled, no-stdint,
+  digit-fallback, hygiene and multi-translation-unit builds.
+- Added `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
+  `.editorconfig`, `.clang-format`, issue and pull request templates, and
+  Dependabot configuration for GitHub Actions.

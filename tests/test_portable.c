@@ -16,8 +16,8 @@
 #include <string.h>
 
 #include "../strictnum.h"
+#include "support.h"
 
-static unsigned long g_checks, g_fails;
 
 /* C89/C++98-compatible bounded decimal formatter for the test oracle.
  * Avoid sprintf: Apple marks it deprecated, and snprintf is not C89.
@@ -41,15 +41,6 @@ static void format_long_decimal(char *buf, size_t capacity, long value)
     *buf = '\0';
 }
 
-#define CHECK(cond)                                                          \
-    do {                                                                     \
-        ++g_checks;                                                          \
-        if (!(cond)) {                                                       \
-            ++g_fails;                                                       \
-            if (g_fails <= 25)                                               \
-                fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        }                                                                    \
-    } while (0)
 
 /* ---- independent oracle (long-based) ---------------------------------- */
 static int ref_is_digit(char c, unsigned base)

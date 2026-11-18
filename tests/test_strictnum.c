@@ -14,18 +14,9 @@
 #include <string.h>
 
 #include "../strictnum.h"
+#include "support.h"
 
-static unsigned long g_checks, g_fails;
 
-#define CHECK(cond)                                                          \
-    do {                                                                     \
-        ++g_checks;                                                          \
-        if (!(cond)) {                                                       \
-            ++g_fails;                                                       \
-            if (g_fails <= 25)                                               \
-                fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        }                                                                    \
-    } while (0)
 
 /* ---- deterministic PRNG (xorshift64*) -------------------------------- */
 static unsigned long long g_rng = 88172645463325252ULL;

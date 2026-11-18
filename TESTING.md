@@ -121,8 +121,9 @@ mismatch as a deterministic regression test before changing the implementation.
 
 ## CTest and CMake integration
 
-For a top-level checkout, CMake enables the `strictnum.core`,
-`strictnum.portable`, and `strictnum.namespace` tests by default:
+For a top-level checkout, CMake enables the CTest suite by default
+(`strictnum.core`, `core_no64`, `portable`, `portable_no_stdint_no64`,
+`digit_fallback`, `hygiene`, `multi_tu` and `namespace`):
 
 ```sh
 cmake -S . -B build

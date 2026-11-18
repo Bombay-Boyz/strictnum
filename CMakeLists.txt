@@ -1,5 +1,24 @@
 cmake_minimum_required(VERSION 3.15)
-project(strictnum VERSION 1.0.0 LANGUAGES C)
+
+# Single source of truth for the version: the STRICTNUM_VERSION_* macros in
+# strictnum.h.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/strictnum.h" _strictnum_version_lines
+     REGEX "^#define STRICTNUM_VERSION_(MAJOR|MINOR|PATCH)[ \t]+[0-9]+")
+foreach(_part MAJOR MINOR PATCH)
+    set(_strictnum_${_part} "")
+    foreach(_line IN LISTS _strictnum_version_lines)
+        if(_line MATCHES "STRICTNUM_VERSION_${_part}[ \t]+([0-9]+)")
+            set(_strictnum_${_part} "${CMAKE_MATCH_1}")
+        endif()
+    endforeach()
+    if(_strictnum_${_part} STREQUAL "")
+        message(FATAL_ERROR "strictnum: cannot read STRICTNUM_VERSION_${_part} from strictnum.h")
+    endif()
+endforeach()
+
+project(strictnum
+    VERSION ${_strictnum_MAJOR}.${_strictnum_MINOR}.${_strictnum_PATCH}
+    LANGUAGES C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -25,9 +44,16 @@ target_include_directories(strictnum INTERFACE
 
 if(STRICTNUM_INSTALL)
     install(TARGETS strictnum EXPORT strictnumTargets)
-    # Install both the conventional top-level header and a namespaced path.
-    install(FILES strictnum.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+    # One installed copy, in a namespaced directory. Both `#include
+    # "strictnum.h"` (through the CMake target or pkg-config) and
+    # `#include <strictnum/strictnum.h>` (with the prefix include directory
+    # on the search path) work.
     install(FILES strictnum.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/strictnum")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/strictnum.pc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/strictnum.pc" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/strictnum.pc"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig")
     install(EXPORT strictnumTargets
         FILE strictnumTargets.cmake
         NAMESPACE strictnum::
@@ -53,21 +79,5 @@ endif()
 
 if(STRICTNUM_BUILD_TESTS)
     enable_testing()
-    add_executable(strictnum_test_strict tests/test_strictnum.c)
-    target_link_libraries(strictnum_test_strict PRIVATE strictnum::strictnum)
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(strictnum_test_strict PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
-    add_test(NAME strictnum.core COMMAND strictnum_test_strict)
-
-    add_executable(strictnum_test_portable tests/test_portable.c)
-    target_link_libraries(strictnum_test_portable PRIVATE strictnum::strictnum)
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(strictnum_test_portable PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
-    add_test(NAME strictnum.portable COMMAND strictnum_test_portable)
-
-    add_executable(strictnum_test_namespace tests/test_header_namespace.c)
-    target_link_libraries(strictnum_test_namespace PRIVATE strictnum::strictnum)
-    add_test(NAME strictnum.namespace COMMAND strictnum_test_namespace)
+    add_subdirectory(tests)
 endif()

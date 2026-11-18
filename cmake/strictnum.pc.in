@@ -1,0 +1,7 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: strictnum
+Description: Strict fixed-width integer parsing (single header)
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}/strictnum
