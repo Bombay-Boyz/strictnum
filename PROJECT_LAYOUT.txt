@@ -30,7 +30,9 @@ strictnum/                              Repository root
 |   |-- cmake_version_reject/            Incompatible package-version test
 |   `-- fuzz_corpus/                     Binary and textual fuzz seeds
 |-- scripts/run_remote_ci.sh             Optional GitHub CLI CI watcher
-`-- .github/workflows/ci.yml             Cross-platform CI
+|-- scripts/release_notes.sh             Extract CHANGELOG notes for a version
+|-- scripts/set_repo_metadata.sh         Set GitHub description and topics
+`-- .github/workflows/                  ci.yml (CI), release.yml (tagged releases)
 
 The repository, CMake project, public header and API all use the strictnum
 name. The GitHub repository rename is a separate hosting operation.

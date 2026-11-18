@@ -1,6 +1,15 @@
 # strictnum
 
+[![CI](https://github.com/Bombay-Boyz/strictnum/actions/workflows/ci.yml/badge.svg)](https://github.com/Bombay-Boyz/strictnum/actions/workflows/ci.yml)
+
 **`strictnum.h` — strict, fixed-width integer parsing for C and C++.**
+
+> **Developed with AI assistance.** The code, tests, documentation and CI
+> configuration of this project were written with substantial help from an AI
+> assistant (Claude, by Anthropic), directed by the maintainer. Its
+> correctness is established by the test suite, differential testing against
+> `strtoll`/`strtoull`, fuzzing, sanitizers and CI, not by trusting the
+> author. Review it as you would any dependency, and please report bugs.
 
 ```c
 #include <stdio.h>
@@ -27,8 +36,16 @@ returns a specific error. It is intended for configuration values, protocol
 fields and other inputs where partial conversion and silent wrapping are
 unacceptable.
 
-## Disclosure
-This project has been prepared using AI. 
+## Why use this instead of `atoi` / `strtol`?
+
+| | `atoi` | `strtol` / `strtoul` | `strictnum` |
+|---|---|---|---|
+| Reports errors | No: returns 0 on garbage | Only if you check `errno` and the end pointer | Always: one status code |
+| `"12abc"` | Accepted as 12 | Accepted unless you check the end pointer | Rejected |
+| Leading space or `+` | Accepted | Accepted | Rejected |
+| Overflow | Undefined behaviour | `ERANGE`, only for `long` | Detected for every fixed-width type |
+| Target type | `int` | `long` / `unsigned long` | `i8`..`i64`, `u8`..`u64` |
+| Output on failure | n/a | Modified | Left unchanged |
 
 ## Design properties
 

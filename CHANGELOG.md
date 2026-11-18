@@ -35,3 +35,7 @@ No unreleased changes.
 - Added `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
   `.editorconfig`, `.clang-format`, issue and pull request templates, and
   Dependabot configuration for GitHub Actions.
+- README: CI badge, an "atoi / strtol / strictnum" comparison near the top and
+  a prominent AI-assistance notice.
+- Added a tag-triggered GitHub release workflow, `scripts/release_notes.sh`
+  and `scripts/set_repo_metadata.sh` (repository description and topics).

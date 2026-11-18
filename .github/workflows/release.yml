@@ -1,0 +1,36 @@
+name: strictnum release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check tag matches the header version and metadata
+        run: |
+          sh tests/check_release_metadata.sh
+          major=$(sed -n 's/^#define STRICTNUM_VERSION_MAJOR[[:space:]]*//p' strictnum.h)
+          minor=$(sed -n 's/^#define STRICTNUM_VERSION_MINOR[[:space:]]*//p' strictnum.h)
+          patch=$(sed -n 's/^#define STRICTNUM_VERSION_PATCH[[:space:]]*//p' strictnum.h)
+          if [ "${GITHUB_REF_NAME}" != "v${major}.${minor}.${patch}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match strictnum.h version ${major}.${minor}.${patch}" >&2
+            exit 1
+          fi
+          echo "VERSION=${major}.${minor}.${patch}" >> "$GITHUB_ENV"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sh scripts/release_notes.sh "$VERSION" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" strictnum.h LICENSE \
+            --title "strictnum $VERSION" \
+            --notes-file release-notes.md \
+            --verify-tag

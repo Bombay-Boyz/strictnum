@@ -1,0 +1,167 @@
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+new file mode 100644
+index 0000000..c945f9b
+--- /dev/null
++++ b/.github/workflows/release.yml
+@@ -0,0 +1,36 @@
++name: strictnum release
++
++on:
++  push:
++    tags:
++      - 'v*'
++
++permissions:
++  contents: write
++
++jobs:
++  release:
++    runs-on: ubuntu-24.04
++    timeout-minutes: 10
++    steps:
++      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
++      - name: Check tag matches the header version and metadata
++        run: |
++          sh tests/check_release_metadata.sh
++          major=$(sed -n 's/^#define STRICTNUM_VERSION_MAJOR[[:space:]]*//p' strictnum.h)
++          minor=$(sed -n 's/^#define STRICTNUM_VERSION_MINOR[[:space:]]*//p' strictnum.h)
++          patch=$(sed -n 's/^#define STRICTNUM_VERSION_PATCH[[:space:]]*//p' strictnum.h)
++          if [ "${GITHUB_REF_NAME}" != "v${major}.${minor}.${patch}" ]; then
++            echo "tag ${GITHUB_REF_NAME} does not match strictnum.h version ${major}.${minor}.${patch}" >&2
++            exit 1
++          fi
++          echo "VERSION=${major}.${minor}.${patch}" >> "$GITHUB_ENV"
++      - name: Create GitHub release
++        env:
++          GH_TOKEN: ${{ github.token }}
++        run: |
++          sh scripts/release_notes.sh "$VERSION" > release-notes.md
++          gh release create "$GITHUB_REF_NAME" strictnum.h LICENSE \
++            --title "strictnum $VERSION" \
++            --notes-file release-notes.md \
++            --verify-tag
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 910590c..ab2c5ae 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -35,3 +35,7 @@ No unreleased changes.
+ - Added `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
+   `.editorconfig`, `.clang-format`, issue and pull request templates, and
+   Dependabot configuration for GitHub Actions.
++- README: CI badge, an "atoi / strtol / strictnum" comparison near the top and
++  a prominent AI-assistance notice.
++- Added a tag-triggered GitHub release workflow, `scripts/release_notes.sh`
++  and `scripts/set_repo_metadata.sh` (repository description and topics).
+diff --git a/PROJECT_LAYOUT.txt b/PROJECT_LAYOUT.txt
+index 3fc7871..bd33315 100644
+--- a/PROJECT_LAYOUT.txt
++++ b/PROJECT_LAYOUT.txt
+@@ -30,7 +30,9 @@ strictnum/                              Repository root
+ |   |-- cmake_version_reject/            Incompatible package-version test
+ |   `-- fuzz_corpus/                     Binary and textual fuzz seeds
+ |-- scripts/run_remote_ci.sh             Optional GitHub CLI CI watcher
+-`-- .github/workflows/ci.yml             Cross-platform CI
++|-- scripts/release_notes.sh             Extract CHANGELOG notes for a version
++|-- scripts/set_repo_metadata.sh         Set GitHub description and topics
++`-- .github/workflows/                  ci.yml (CI), release.yml (tagged releases)
+ 
+ The repository, CMake project, public header and API all use the strictnum
+ name. The GitHub repository rename is a separate hosting operation.
+diff --git a/README.md b/README.md
+index e6afba5..53127dd 100644
+--- a/README.md
++++ b/README.md
+@@ -1,7 +1,16 @@
+ # strictnum
+ 
++[![CI](https://github.com/Bombay-Boyz/strictnum/actions/workflows/ci.yml/badge.svg)](https://github.com/Bombay-Boyz/strictnum/actions/workflows/ci.yml)
++
+ **`strictnum.h` — strict, fixed-width integer parsing for C and C++.**
+ 
++> **Developed with AI assistance.** The code, tests, documentation and CI
++> configuration of this project were written with substantial help from an AI
++> assistant (Claude, by Anthropic), directed by the maintainer. Its
++> correctness is established by the test suite, differential testing against
++> `strtoll`/`strtoull`, fuzzing, sanitizers and CI, not by trusting the
++> author. Review it as you would any dependency, and please report bugs.
++
+ ```c
+ #include <stdio.h>
+ #include "strictnum.h"
+@@ -27,8 +36,16 @@ returns a specific error. It is intended for configuration values, protocol
+ fields and other inputs where partial conversion and silent wrapping are
+ unacceptable.
+ 
+-## Disclosure
+-This project has been prepared using AI. 
++## Why use this instead of `atoi` / `strtol`?
++
++| | `atoi` | `strtol` / `strtoul` | `strictnum` |
++|---|---|---|---|
++| Reports errors | No: returns 0 on garbage | Only if you check `errno` and the end pointer | Always: one status code |
++| `"12abc"` | Accepted as 12 | Accepted unless you check the end pointer | Rejected |
++| Leading space or `+` | Accepted | Accepted | Rejected |
++| Overflow | Undefined behaviour | `ERANGE`, only for `long` | Detected for every fixed-width type |
++| Target type | `int` | `long` / `unsigned long` | `i8`..`i64`, `u8`..`u64` |
++| Output on failure | n/a | Modified | Left unchanged |
+ 
+ ## Design properties
+ 
+diff --git a/scripts/release_notes.sh b/scripts/release_notes.sh
+new file mode 100755
+index 0000000..54a65e8
+--- /dev/null
++++ b/scripts/release_notes.sh
+@@ -0,0 +1,16 @@
++#!/bin/sh
++# Print the CHANGELOG.md section for one version.
++#   sh scripts/release_notes.sh 1.0.0
++set -eu
++ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
++version=${1:?usage: release_notes.sh VERSION}
++notes=$(awk -v h="## $version" '
++    $0 == h { on = 1; next }
++    /^## / { on = 0 }
++    on { print }
++' "$ROOT/CHANGELOG.md")
++if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
++    echo "release_notes: no CHANGELOG.md section for version $version" >&2
++    exit 1
++fi
++printf '%s\n' "$notes"
+diff --git a/scripts/set_repo_metadata.sh b/scripts/set_repo_metadata.sh
+new file mode 100755
+index 0000000..e003c45
+--- /dev/null
++++ b/scripts/set_repo_metadata.sh
+@@ -0,0 +1,18 @@
++#!/bin/sh
++# Set the GitHub repository description, homepage topics and features.
++# Needs the GitHub CLI, logged in as a user with admin rights on the repo:
++#   gh auth login
++#   sh scripts/set_repo_metadata.sh Bombay-Boyz/strictnum
++set -eu
++repo=${1:?usage: set_repo_metadata.sh OWNER/REPO}
++gh repo edit "$repo" \
++    --description "Strict, whole-input integer parsing for C89+ and C++98+: fixed-width types, one status code, header-only. A safer atoi/strtol." \
++    --add-topic c \
++    --add-topic header-only \
++    --add-topic integer-parsing \
++    --add-topic strtol-alternative \
++    --add-topic c89 \
++    --add-topic cpp \
++    --add-topic single-header \
++    --add-topic parsing
++echo "updated $repo"
+diff --git a/tests/run_all.sh b/tests/run_all.sh
+index 04b01c9..8382bfe 100755
+--- a/tests/run_all.sh
++++ b/tests/run_all.sh
+@@ -166,6 +166,7 @@ echo '== Documentation examples =='
+ run sh "$ROOT/tests/check_docs.sh"
+ echo '== Release metadata consistency =='
+ run sh "$ROOT/tests/check_release_metadata.sh"
++run sh "$ROOT/scripts/release_notes.sh" "$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' "$ROOT/strictnum.h")" >/dev/null
+ 
+ echo '== Example compile and runtime tests =='
+ run sh "$ROOT/tests/test_examples.sh"

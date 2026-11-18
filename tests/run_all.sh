@@ -166,6 +166,7 @@ echo '== Documentation examples =='
 run sh "$ROOT/tests/check_docs.sh"
 echo '== Release metadata consistency =='
 run sh "$ROOT/tests/check_release_metadata.sh"
+run sh "$ROOT/scripts/release_notes.sh" "$(sed -n 's/^ \* Version \([0-9.]*\)$/\1/p' "$ROOT/strictnum.h")" >/dev/null
 
 echo '== Example compile and runtime tests =='
 run sh "$ROOT/tests/test_examples.sh"
