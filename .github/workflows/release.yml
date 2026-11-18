@@ -29,8 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sh scripts/release_notes.sh "$VERSION" > release-notes.md
           gh release create "$GITHUB_REF_NAME" strictnum.h LICENSE \
             --title "strictnum $VERSION" \
-            --notes-file release-notes.md \
+            --generate-notes \
             --verify-tag

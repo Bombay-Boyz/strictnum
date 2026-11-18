@@ -2,7 +2,7 @@
 
 1. Keep `strictnum.h` portable C89/C++98: no declarations after statements,
    no `//` comments, no non-ASCII source.
-2. Every behaviour change needs a test in `tests/` and a `CHANGELOG.md` entry.
+2. Every behaviour change needs a test in `tests/`.
 3. Before opening a pull request run, from the repository root:
 
        sh tests/run_all.sh

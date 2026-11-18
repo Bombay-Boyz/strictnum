@@ -348,7 +348,3 @@ The implementation has no mutable global state, allocation, locale changes,
 or `errno` side effects. Calls are reentrant and can be made concurrently
 provided each call receives valid input memory that is not being modified
 concurrently and each call writes to its own output object.
-
-## Repository hosting name
-
-The source and CMake project are named `strictnum`. See [REPOSITORY_RENAME.md](REPOSITORY_RENAME.md) for the separate hosted-repository rename and remote-URL update steps.

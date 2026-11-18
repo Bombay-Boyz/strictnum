@@ -19,10 +19,6 @@ if ! grep -q 'STRICTNUM_VERSION_(MAJOR|MINOR|PATCH)' "$ROOT/CMakeLists.txt" ||
     echo 'release metadata: CMakeLists.txt must read its version from strictnum.h' >&2
     exit 1
 fi
-if ! awk -v heading="## $header_version" '$0 == heading { found = 1 } END { exit !found }' "$ROOT/CHANGELOG.md"; then
-    echo "release metadata: CHANGELOG.md has no exact heading for version $header_version" >&2
-    exit 1
-fi
 
 license_notice=$(sed -n 's/^\(Copyright (c) .*$\)/\1/p' "$ROOT/LICENSE" | head -n 1)
 header_notice=$(sed -n 's/^ \* \(Copyright (c) .*$\)/\1/p' "$ROOT/strictnum.h" | head -n 1)
