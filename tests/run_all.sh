@@ -185,6 +185,10 @@ if command -v cmake >/dev/null 2>&1; then
         echo 'FAIL: strictnum.h must be installed exactly once' >&2
         exit 1
     fi
+    # The namespaced include path must work with only the prefix include dir.
+    printf '#include <strictnum/strictnum.h>\nint main(void){sn_u8 v=0;return sn_parse_u8_z("7",&v)==SN_OK&&v==7u?0:1;}\n' >"$BUILD/prefix_include.c"
+    run "$CC" -std=c99 -Wall -Wextra -Werror -I"$BUILD/cmake-install/include" "$BUILD/prefix_include.c" -o "$BUILD/prefix_include"
+    run "$BUILD/prefix_include"
     if command -v pkg-config >/dev/null 2>&1; then
         run env PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --exists strictnum
         pc_cflags=$(PKG_CONFIG_PATH="$(dirname "$pc_file")" pkg-config --cflags strictnum)

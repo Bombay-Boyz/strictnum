@@ -85,6 +85,12 @@ When configuring a consumer, set `CMAKE_PREFIX_PATH` to the installation
 prefix if it is not already searched by CMake. Direct header inclusion does
 not require CMake; this target is an integration convenience.
 
+The header is installed once, as `<prefix>/include/strictnum/strictnum.h`.
+Through the CMake target (`strictnum::strictnum`) or pkg-config
+(`pkg-config --cflags strictnum`), write `#include "strictnum.h"`. If you
+add `-I<prefix>/include` by hand instead, write
+`#include <strictnum/strictnum.h>`.
+
 ## API
 
 ```text

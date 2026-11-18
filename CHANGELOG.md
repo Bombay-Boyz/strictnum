@@ -28,7 +28,8 @@ No unreleased changes.
 - Fixed the `TUTORIAL.md` port example to match `examples/port.c`;
   `tests/test_examples.sh` now checks the tutorial transcript.
 - CMake reads the package version from `strictnum.h`; the header is installed
-  once, under `include/strictnum/`; a `strictnum.pc` pkg-config file is
+  once, as `include/strictnum/strictnum.h` (hand-written `-I<prefix>/include`
+  users include `<strictnum/strictnum.h>`); a `strictnum.pc` pkg-config file is
   installed; the CTest suite now covers the 64-bit-disabled, no-stdint,
   digit-fallback, hygiene and multi-translation-unit builds.
 - Added `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
