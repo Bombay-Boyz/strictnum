@@ -4,12 +4,9 @@
 
 **`strictnum.h` — strict, fixed-width integer parsing for C and C++.**
 
-> **Developed with AI assistance.** The code, tests, documentation and CI
-> configuration of this project were written with substantial help from an AI
-> assistant (Claude, by Anthropic), directed by the maintainer. Its
-> correctness is established by the test suite, differential testing against
-> `strtoll`/`strtoull`, fuzzing, sanitizers and CI, not by trusting the
-> author. Review it as you would any dependency, and please report bugs.
+> **Developed with AI assistance.** 
+>Started as a learning project 20 lines only (loops and basic checks)"123" to 123 for C. Everytime would get feedback that something was missing. sign checks and overflow etc.. So checked around if something like this exists.. Most are handcoded.. so thought would be nice to have a library.. Was not sure about high quality code.. so Built and tested with AI assistance. Shared in case its usefull to others. Its correctness is established by the test suite, differential testing against
+> `strtoll`/`strtoull`, fuzzing, sanitizers and CI. Review it as you would any dependency, and please report bugs.
 
 ```c
 #include <stdio.h>
