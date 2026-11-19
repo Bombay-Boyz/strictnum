@@ -1,6 +1,6 @@
 /* strictnum.h -- strict, portable integer parsing for C and C++.
  *
- * Version 1.0.0
+ * Version 1.0.1
  * Project: strictnum; public single-header API: strictnum.h.
  *
  * Drop this one file into your project and #include it. No build system,
@@ -15,6 +15,8 @@
  *   - The WHOLE input must be a number. "12abc", " 12", "12 " are errors.
  *   - Only an optional leading '-' (signed types only) followed by digits.
  *     No '+', no whitespace, no "0x"/"0b"/"0" prefixes, no digit separators.
+ *   - Leading zeros are digits: "007" is 7 and "08" is 8 (never octal).
+ *   - Signed parsers accept "-0" (the value is 0).
  *   - Unsigned parsers reject '-' entirely (even "-0"); they never wrap.
  *   - Out-of-range values are errors, never clamped.
  *   - Locale independent: <ctype.h>, <errno.h> and <locale.h> are not used.
@@ -54,7 +56,7 @@
 
 #define STRICTNUM_VERSION_MAJOR 1
 #define STRICTNUM_VERSION_MINOR 0
-#define STRICTNUM_VERSION_PATCH 0
+#define STRICTNUM_VERSION_PATCH 1
 
 /* ------------------------------------------------------------------------
  * Compiler glue

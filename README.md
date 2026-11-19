@@ -4,9 +4,14 @@
 
 **`strictnum.h` — strict, fixed-width integer parsing for C and C++.**
 
-> **Developed with AI assistance.** 
->Started as a learning project 20 lines only (loops and basic checks)"123" to 123 for C. Everytime would get feedback that something was missing. sign checks and overflow etc.. So checked around if something like this exists.. Most are handcoded.. so thought would be nice to have a library.. Was not sure about high quality code.. so Built and tested with AI assistance. Shared in case its usefull to others. Its correctness is established by the test suite, differential testing against
-> `strtoll`/`strtoull`, fuzzing, sanitizers and CI. Review it as you would any dependency, and please report bugs.
+> **Built with AI assistance.** `strictnum` started as a learning exercise in
+> C: a 20-line loop that turns `"123"` into 123. Each test round showed
+> something missing (signs, overflow, empty input), and existing solutions are
+> mostly hand-coded one-offs, so I made it a small library. Not being sure of
+> the quality of code I wrote alone, I built and tested it with AI assistance
+> (Claude, by Anthropic). Its correctness rests on the test suite,
+> differential testing against `strtoll`/`strtoull`, fuzzing, sanitizers and
+> CI. Review it as you would any dependency, and please report bugs.
 
 ```c
 #include <stdio.h>
@@ -47,8 +52,10 @@ unacceptable.
 ## Design properties
 
 - **Whole-input validation.** `"12abc"`, `" 12"` and `"12 "` are rejected.
-- **Canonical syntax.** Signed types accept an optional leading `-`; `+`,
-  whitespace, digit separators and automatic prefixes are rejected.
+- **Plain syntax.** Signed types accept an optional leading `-`. Leading
+  zeros are accepted (`"007"` is 7, `"08"` is 8), and `-0` is accepted for
+  signed types (it is 0). `+`, whitespace, digit separators and automatic
+  prefixes are rejected.
 - **No unsigned negation.** Unsigned parsers reject `-`, including `-0`.
 - **Checked range.** Overflow is detected before the multiply/add operation.
 - **Transactional output.** `*out` is written only when the result is `SN_OK`.
@@ -186,8 +193,7 @@ provided only when an exact 64-bit type is available through `<stdint.h>`, a
 verified 64-bit `long`, or the explicitly requested `long long` fallback.
 Internal implementation macros are undefined before the header finishes
 processing; applications should use only the documented configuration and
-feature macros. The header does not reserve or reject unrelated consumer macros such as
-`SN_API`; all definitions retain internal linkage to preserve safe
+feature macros. The header does not reserve or reject unrelated consumer macros; all definitions retain internal linkage to preserve safe
 multi-translation-unit header-only use.
 
 ### Public function inventory
@@ -259,21 +265,10 @@ than silently passing when the required toolchain is unavailable. See
 [`TESTING.md`](TESTING.md) for commands and CI coverage.
 
 
-**Verification status:** the GitHub Actions workflow completed successfully
-for commit `d0fd865a0b8b6ae2b91c48b7b74a682fb38769f1` on 13 November 2026.
-
-The successful run verified the following configured targets:
-
-- Linux x86-64 and ARM64;
-- macOS Intel and Apple Silicon;
-- Windows MSVC x64 and x86;
-- Linux x86 32-bit execution (ILP32);
-- Linux Clang AddressSanitizer/UndefinedBehaviorSanitizer and mandatory
-  semantic libFuzzer testing.
-
-These results establish verification for the listed configurations and
-that specific commit. They do not establish compatibility with every
-compiler, operating system, architecture or C implementation.
+CI status for the current commit is shown by the badge at the top of this
+page; the configured jobs are listed in [`TESTING.md`](TESTING.md). A green
+run covers only those configurations. It does not establish compatibility
+with every compiler, operating system, architecture or C implementation.
 
 Big-endian, EBCDIC and 8-/16-bit microcontroller targets are not currently
 verified. Local developer machines may skip optional facilities when the

@@ -94,3 +94,33 @@ jobs:
           cp -R tests/fuzz_corpus/. "$RUNNER_TEMP/strictnum-fuzz-corpus/"
       - name: Run mandatory semantic fuzz campaign
         run: ./fuzz_strictnum -verbosity=0 -max_len=256 -runs=250000 "$RUNNER_TEMP/strictnum-fuzz-corpus"
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [unix-native, linux-32-bit, windows-msvc, linux-semantic-fuzz]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check tag matches the header version and release metadata
+        run: |
+          sh tests/check_release_metadata.sh
+          major=$(sed -n 's/^#define STRICTNUM_VERSION_MAJOR[[:space:]]*//p' strictnum.h)
+          minor=$(sed -n 's/^#define STRICTNUM_VERSION_MINOR[[:space:]]*//p' strictnum.h)
+          patch=$(sed -n 's/^#define STRICTNUM_VERSION_PATCH[[:space:]]*//p' strictnum.h)
+          if [ "${GITHUB_REF_NAME}" != "v${major}.${minor}.${patch}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match strictnum.h version ${major}.${minor}.${patch}" >&2
+            exit 1
+          fi
+          echo "VERSION=${major}.${minor}.${patch}" >> "$GITHUB_ENV"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" strictnum.h LICENSE \
+            --title "strictnum $VERSION" \
+            --generate-notes \
+            --verify-tag
